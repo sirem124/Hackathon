@@ -1,0 +1,7 @@
+node_modules/
+cybertrace.db
+php/cybertrace_php_users.db
+*.db-journal
+*.db-wal
+*.db-shm
+.env

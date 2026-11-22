@@ -1,24 +1,30 @@
-CYBERTRACE PHP User Database
+# CYBERTRACE PHP User Database
 
 This separate SQLite database stores only:
 
-Full name
-Email address
-Account creation timestamp
+- Full name
+- Email address
+- Account creation timestamp
 
 It deliberately does not store passwords.
 
-Files
-database.php creates cybertrace_php_users.db.
-signup.php accepts POST fields named name and email.
-users.php displays the saved records.
-Run on Windows
-Install PHP and enable the pdo_sqlite extension.
-Open a terminal in this project.
-Set an admin password for the records page, then run:
-powershell
-$env:CYBERTRACE_PHP_ADMIN_PASSWORD = "choose-a-long-password"
+## Files
+
+- `database.php` creates `cybertrace_php_users.db`.
+- `signup.php` accepts `POST` fields named `name` and `email`.
+- `users.php` displays the saved records.
+
+## Run on Windows
+
+1. Install PHP and enable the `pdo_sqlite` extension.
+2. Open a terminal in this project.
+3. Run:
+
+```powershell
 php -S localhost:8080
-Open:
-Viewer: http://localhost:8080/users.php (asks for the password above)
-Signup endpoint: POST http://localhost:8080/signup.php  
+```
+
+4. Open:
+
+- Viewer: `http://localhost:8080/php/users.php`
+- Signup endpoint: `POST http://localhost:8080/php/signup.php`

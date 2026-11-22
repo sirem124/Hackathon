@@ -1,14 +1,3 @@
-<?php
-// Protected: set CYBERTRACE_PHP_ADMIN_PASSWORD, then sign in with any username and that password.
-$expected = getenv('CYBERTRACE_PHP_ADMIN_PASSWORD');
-$given = $_SERVER['PHP_AUTH_PW'] ?? '';
-if (!$expected || !hash_equals($expected, $given)) {
-    header('WWW-Authenticate: Basic realm="CYBERTRACE records"');
-    http_response_code($expected ? 401 : 403);
-    echo $expected ? 'Authentication required.' : 'Set CYBERTRACE_PHP_ADMIN_PASSWORD to enable this page.';
-    exit;
-}
-?>
 <!doctype html>
 <html lang="en">
 <head>

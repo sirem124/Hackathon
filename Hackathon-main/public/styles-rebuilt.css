@@ -47,3 +47,157 @@ body.workstation-open{overflow:hidden}.ct-workstation{position:fixed;inset:0;z-i
 
 /* Administrator Kali infrastructure */
 .admin-kali{border:1px solid var(--line);padding:10px;margin-bottom:12px}.admin-kali>p{font-size:10px;color:#93a1af}.kali-admin-row{display:grid;grid-template-columns:1fr 90px 100px 55px 55px;align-items:center;gap:6px;border-top:1px solid var(--line);padding:8px 0;font-size:9px}.kali-admin-row div{display:flex;flex-direction:column}.kali-admin-row small{color:#718293}.kali-admin-row>span{color:var(--green)}.kali-admin-row button{border:1px solid var(--line);background:#101925;color:#b8c4ce;height:28px;font-size:8px}@media(max-width:575px){.kali-admin-row{grid-template-columns:1fr 70px}.kali-admin-row>b{display:none}}
+
+/* ===== Application launcher (was unstyled) ===== */
+.tool-launcher{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(4,7,12,.82);backdrop-filter:blur(8px)}
+.tool-launcher.open{display:flex}
+.launcher-panel{width:min(980px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#111b28,#0a121c);border:1px solid rgba(163,243,107,.25);box-shadow:0 30px 100px rgba(0,0,0,.62);padding:24px}
+.launcher-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.launcher-panel header small{color:var(--green);font:10px monospace;letter-spacing:2px}
+.launcher-panel header h2{margin:4px 0 0;font-size:20px;letter-spacing:2px}
+.launcher-panel header button{background:none;border:1px solid var(--line);color:var(--text);width:36px;height:36px;cursor:pointer}
+.launcher-panel header button:hover{border-color:var(--green);color:var(--green)}
+.launcher-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.launcher-grid button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;padding:16px;background:rgba(13,22,34,.9);border:1px solid var(--line);color:var(--text);cursor:pointer;transition:.2s}
+.launcher-grid button:hover,.launcher-grid button:focus-visible{border-color:var(--green);box-shadow:inset 2px 0 var(--green);transform:translateY(-2px);outline:none}
+.launcher-grid button i{font-size:24px;color:var(--green)}
+.launcher-grid button b{font-size:15px;letter-spacing:.5px}
+.launcher-grid button span{font-size:12px;line-height:1.45;color:var(--muted)}
+@media(max-width:575px){.launcher-grid{grid-template-columns:1fr 1fr}.launcher-panel{padding:16px}}
+
+/* ===== AI Kali Tutor ===== */
+.ct-workstation{grid-template-columns:260px 1fr auto}
+.tutor-panel{display:none;flex-direction:column;min-height:0;background:#08111a;color:#d9e5e2;font-family:Inter,Arial,sans-serif}
+.tutor-panel.open{display:flex}
+.workstation-tutor{grid-column:3;grid-row:2;width:360px;border-left:1px solid #1e303f}
+.lab-tutor{margin-top:16px;height:380px;border:1px solid rgba(119,169,255,.18);background:linear-gradient(145deg,#0d1824,#08111a)}
+.tutor-lab .tutor-close{display:none}
+.tutor-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1e303f;background:#0b141d}
+.tutor-head>div{flex:1;min-width:0}
+.tutor-head small{display:block;color:var(--green);font:9px monospace;letter-spacing:2px}
+.tutor-head b{font-size:13px}
+.tutor-badge{font:9px monospace;letter-spacing:1px;padding:3px 7px;border:1px solid #2b4054;color:#93a1af}
+.tutor-badge.ai{border-color:var(--green);color:var(--green)}
+.tutor-close{background:none;border:0;color:#93a1af;cursor:pointer}
+.tutor-log{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+.tutor-msg{max-width:94%;padding:10px 12px;font-size:13px;line-height:1.55;border:1px solid #1e303f;word-wrap:break-word}
+.tutor-user{align-self:flex-end;background:rgba(119,169,255,.12);border-color:rgba(119,169,255,.3)}
+.tutor-assistant{align-self:flex-start;background:rgba(163,243,107,.05);border-color:rgba(163,243,107,.18)}
+.tutor-system{align-self:center;font-size:11px;color:#93a1af;border-style:dashed;background:none}
+.tutor-error{color:#ef9a90;border-color:rgba(239,154,144,.4)}
+.tutor-msg code{font-family:"Cascadia Mono",Consolas,monospace;font-size:12px;background:#05090e;padding:1px 5px;color:var(--green-2)}
+.tutor-code{position:relative;margin:8px 0 2px;padding:10px 64px 10px 10px;background:#05090e;border:1px solid #1e303f;overflow-x:auto;white-space:pre-wrap}
+.tutor-code code{padding:0;background:none;display:block}
+.tutor-try{position:absolute;top:6px;right:6px;font:9px monospace;letter-spacing:1px;padding:4px 8px;background:transparent;border:1px solid var(--green);color:var(--green);cursor:pointer}
+.tutor-try:hover{background:var(--green);color:#08100b}
+.tutor-chips{display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px;border-top:1px solid #1e303f}
+.tutor-chips button{font-size:11px;padding:5px 9px;background:#0d1822;border:1px solid #2b4054;color:#b3bec8;cursor:pointer}
+.tutor-chips button:hover{border-color:var(--green);color:var(--green)}
+.tutor-form{display:grid;grid-template-columns:1fr 44px;border-top:1px solid #1e303f;background:#09111a}
+.tutor-form input{min-width:0;height:44px;border:0;outline:0;background:transparent;color:#fff;font-size:13px;padding:0 12px}
+.tutor-form button{border:0;background:transparent;color:var(--green);cursor:pointer}
+.tutor-form.busy{opacity:.6;pointer-events:none}
+.tutor-dots i{display:inline-block;width:6px;height:6px;margin-right:4px;border-radius:50%;background:var(--green);animation:tutorDot 1s infinite ease-in-out}
+.tutor-dots i:nth-child(2){animation-delay:.15s}.tutor-dots i:nth-child(3){animation-delay:.3s}
+@keyframes tutorDot{0%,80%,100%{opacity:.25}40%{opacity:1}}
+#toggleWorkTutor{color:var(--green)!important;font-size:8px}
+@media(max-width:1100px){
+  .ct-workstation{grid-template-columns:200px 1fr}
+  .workstation-tutor{position:absolute;right:0;bottom:0;top:52px;z-index:5;width:min(360px,100%);box-shadow:-20px 0 60px rgba(0,0,0,.6)}
+}
+@media(max-width:700px){.ct-workstation{grid-template-columns:1fr}.workstation-sidebar{display:none}}
+
+/* ===== Cybersecurity News tab ===== */
+.news-section{background:linear-gradient(180deg,#060a10,#09111b)}
+.news-toolbar{display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center;margin:8px 0 12px}
+.news-filters{display:flex;flex-wrap:wrap;gap:6px}
+.news-filters button,.news-tools>button{padding:7px 12px;font-size:12px;font-weight:600;background:#0d1822;border:1px solid var(--line);color:#b3bec8;cursor:pointer;transition:.2s}
+.news-filters button:hover,.news-tools>button:hover{border-color:var(--green);color:var(--green)}
+.news-filters button.active{background:var(--green);border-color:var(--green);color:#08100b}
+.news-tools{display:flex;gap:8px;align-items:center}
+.news-tools>button[hidden]{display:none}
+.news-search{position:relative}
+.news-search i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:12px}
+.news-search input{width:210px;height:34px;padding:0 10px 0 30px;background:#0d1822;border:1px solid var(--line);color:var(--text);font-size:12px;outline:0}
+.news-search input:focus{border-color:var(--green)}
+.news-status{min-height:18px;margin-bottom:14px;color:var(--muted);font:11px monospace}
+.news-layout{display:grid;grid-template-columns:1fr 300px;gap:22px;align-items:start}
+.news-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.news-card{display:flex;flex-direction:column;background:linear-gradient(145deg,rgba(16,27,40,.96),rgba(9,15,23,.96));border:1px solid rgba(119,169,255,.14);transition:.2s;overflow:hidden}
+.news-card:hover{border-color:rgba(163,243,107,.3);transform:translateY(-2px)}
+.news-thumb{display:block;aspect-ratio:16/8;background:#0b141d;overflow:hidden}
+.news-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.news-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.news-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font:10px monospace;color:var(--muted);letter-spacing:.5px}
+.news-tag{padding:2px 7px;border:1px solid #2b4054;color:var(--cyan);text-transform:uppercase}
+.news-tag.vulnerability{border-color:#e0a24a;color:#e0a24a}.news-tag.breach{border-color:#ef9a90;color:#ef9a90}
+.news-tag.malware{border-color:#d985ff;color:#d985ff}.news-tag.ai{border-color:var(--blue);color:var(--blue)}
+.news-tag.advisory{border-color:var(--green);color:var(--green)}
+.news-body h3{margin:0;font-size:16px;line-height:1.35}
+.news-body h3 a{color:var(--text)}.news-body h3 a:hover{color:var(--green)}
+.news-body p{margin:0;color:var(--muted);font-size:13px;line-height:1.55}
+.news-read{margin-top:auto;padding-top:6px;color:var(--green);font-size:12px;font-weight:700}
+.news-empty{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;gap:10px;padding:50px 20px;color:var(--muted);border:1px dashed var(--line)}
+.news-empty i{font-size:28px;color:var(--green)}
+.news-panel{padding:18px;background:linear-gradient(145deg,rgba(14,25,38,.95),rgba(7,12,18,.92));border:1px solid rgba(163,243,107,.22);position:sticky;top:100px}
+.news-panel small{color:var(--green);font:10px monospace;letter-spacing:2px}
+.news-panel h4{margin:6px 0 14px;font-size:15px}
+.news-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.news-stats strong{display:block;font-size:26px;color:var(--green)}
+.news-stats span{font-size:11px;color:var(--muted)}
+.news-latest{display:flex;flex-direction:column;gap:4px;padding-top:12px;border-top:1px solid var(--line)}
+.news-latest small{color:var(--muted)}
+.news-latest a{color:var(--text);font-size:13px;font-weight:600}.news-latest a:hover{color:var(--green)}
+.news-latest span{font:10px monospace;color:var(--muted)}
+.news-note{margin:12px 0 0;font-size:12px;color:var(--muted)}
+@media(max-width:991px){.news-layout{grid-template-columns:1fr}.news-panel{position:static}.news-search input{width:150px}}
+
+/* ===== News page (standalone) ===== */
+.news-page{background:#060a10}
+.news-hero{padding:130px 0 34px;background:radial-gradient(circle at 80% 30%,rgba(119,169,255,.10),transparent 30%),radial-gradient(circle at 10% 20%,rgba(163,243,107,.06),transparent 30%);border-bottom:1px solid rgba(255,255,255,.05)}
+.news-hero h1{margin:10px 0 10px;font-size:clamp(38px,6vw,68px);font-weight:800;letter-spacing:-2px}
+.news-hero h1 em{color:var(--green);font-style:normal}
+.news-hero p{max-width:620px;color:var(--muted);margin:0}
+.news-main{padding-top:28px;padding-bottom:60px;min-height:60vh}
+.news-login{color:#b3bec8;font-size:13px;font-weight:600;padding:8px 12px}
+.news-footer{border-top:1px solid var(--line);padding:22px 0;background:#05070b;color:var(--muted);font-size:12px}
+.news-footer .container-xl{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between}
+.news-footer a{color:var(--green)}
+.navbar-nav a.active:after{transform:scaleX(1)}
+
+/* ===== Hack the AI ===== */
+.hackai-section{background:radial-gradient(circle at 15% 40%,rgba(163,243,107,.05),transparent 28%)}
+.hackai-tabs{display:flex;gap:8px;margin:6px 0 18px;flex-wrap:wrap}
+.hackai-tabs button{padding:8px 16px;font-size:12px;font-weight:700;background:#0d1822;border:1px solid var(--line);color:#b3bec8;cursor:pointer}
+.hackai-tabs button.active{background:var(--green);border-color:var(--green);color:#08100b}
+.hackai-tabs i{color:inherit}
+.hackai-grid{display:grid;grid-template-columns:1fr 1.1fr;gap:20px}
+.hackai-brief,.hackai-chat{background:linear-gradient(145deg,rgba(16,27,40,.96),rgba(9,15,23,.96));border:1px solid rgba(119,169,255,.16);padding:20px}
+.hackai-brief small{color:var(--green);font:10px monospace;letter-spacing:2px}
+.hackai-brief h3{margin:6px 0 10px;font-size:20px}
+.hackai-brief p{color:var(--muted);font-size:14px;line-height:1.6}
+.hackai-goal{color:var(--text)!important}
+.hackai-goal i{color:var(--green)}
+.hackai-hintbtn,.hackai-result button{padding:7px 12px;font-size:12px;background:transparent;border:1px solid var(--green);color:var(--green);cursor:pointer}
+.hackai-hintbtn:hover,.hackai-result button:hover{background:var(--green);color:#08100b}
+.hackai-hint{padding:10px 12px;font-size:13px;color:var(--cyan);border:1px dashed #2b4054}
+.hackai-flagform{display:flex;gap:8px;margin-top:16px}
+.hackai-flagform input{flex:1;min-width:0;height:38px;padding:0 10px;background:#05090e;border:1px solid var(--line);color:var(--green-2);font-family:monospace;outline:0}
+.hackai-flagform input:focus{border-color:var(--green)}
+.hackai-flagform button{padding:0 14px;background:var(--green);border:0;color:#08100b;font-weight:700;cursor:pointer}
+.hackai-result{margin-top:12px;font-size:13px}
+.hackai-result.ok{color:var(--green-2)}.hackai-result.bad{color:#ef9a90}
+.hackai-lesson{margin:10px 0;padding:10px;border-left:2px solid var(--green);color:var(--muted)}
+.hackai-chat{display:flex;flex-direction:column;padding:0;min-height:420px}
+.hackai-chathead{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);font:11px monospace;letter-spacing:1px}
+.hackai-chathead i{color:var(--green)}
+.hackai-chathead span{margin-left:auto;padding:2px 7px;border:1px solid #2b4054;color:var(--muted);font-size:9px}
+.hackai-log{flex:1;overflow-y:auto;max-height:340px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.hackai-msg{max-width:88%;padding:9px 12px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;border:1px solid var(--line)}
+.hackai-msg.bot{align-self:flex-start;background:rgba(163,243,107,.05);border-color:rgba(163,243,107,.2)}
+.hackai-msg.user{align-self:flex-end;background:rgba(119,169,255,.12);border-color:rgba(119,169,255,.3)}
+.hackai-form{display:grid;grid-template-columns:1fr 46px;border-top:1px solid var(--line)}
+.hackai-form input{height:46px;border:0;outline:0;background:transparent;color:#fff;padding:0 14px;font-size:13px}
+.hackai-form button{border:0;background:transparent;color:var(--green);cursor:pointer}
+.hackai-box{padding:30px;border:1px dashed var(--line);color:var(--muted)}
+@media(max-width:900px){.hackai-grid{grid-template-columns:1fr}}

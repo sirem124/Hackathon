@@ -82,7 +82,7 @@
         badge.textContent = data.source === 'ai' ? 'AI' : 'OFFLINE';
         badge.classList.toggle('ai', data.source === 'ai');
         if (data.needsLogin) addMessage('system', 'Log in to unlock the full AI tutor. You are using the built-in offline tutor.');
-        else if (data.source === 'offline' && !data.aiAvailable) addMessage('system', 'Offline tutor mode: set ANTHROPIC_API_KEY on the server to enable the AI tutor.');
+        else if (data.source === 'offline' && !data.aiAvailable) addMessage('system', 'Offline tutor mode: set XAI_API_KEY on the server to enable the AI tutor.');
       } catch (error) {
         pending.classList.remove('pending');
         pending.classList.add('tutor-error');

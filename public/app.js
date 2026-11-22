@@ -13,7 +13,6 @@ const termLines=['> initializing global trace','> 68 nodes synchronized','> anom
 
 const counterObserver=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){const el=e.target;const target=+el.dataset.count;let n=0;const step=Math.max(1,Math.ceil(target/45));const tick=()=>{n=Math.min(target,n+step);el.textContent=n.toLocaleString();if(n<target)requestAnimationFrame(tick)};tick();counterObserver.unobserve(el)}}),{threshold:.6});document.querySelectorAll('[data-count]').forEach(el=>counterObserver.observe(el));
 
-const incidentSearch=document.getElementById('incidentSearch'),sectorFilter=document.getElementById('sectorFilter');
 async function loadIncidents(){
   const search=incidentSearch.value||'';
   const sector=sectorFilter.value||'';
@@ -21,10 +20,10 @@ async function loadIncidents(){
   try{
     const r=await fetch(`/api/incidents?search=${encodeURIComponent(search)}&sector=${encodeURIComponent(sector)}`);
     const incidents=await r.json();
-    document.getElementById('incidentRows').innerHTML=incidents.map(i=>`<div class="incident-row"><div class="incident-name"><a href="${i.source}" target="_blank" rel="noopener"><b>${i.title}</b></a><small>${i.organization}</small></div><span>${i.year}</span><span class="sector-tag">${i.sector}</span><span class="severity ${i.severity}">${i.severity}</span><button class="save-incident" data-id="${i.id}" title="Save incident"><i class="bi bi-bookmark"></i></button></div>`).join('')||'<div class="incident-empty"><i class="bi bi-search"></i><span>No incidents matched this trace.</span></div>';
+    document.getElementById('incidentRows').innerHTML=incidents.map(i=>`<div class="incident-row"><div class="incident-name"><a href="${/^https?:\/\//.test(i.source)?escapeHtml(i.source):'#'}" target="_blank" rel="noopener noreferrer"><b>${escapeHtml(i.title)}</b></a><small>${escapeHtml(i.organization)}</small></div><span>${escapeHtml(i.year)}</span><span class="sector-tag">${escapeHtml(i.sector)}</span><span class="severity ${escapeHtml(i.severity)}">${escapeHtml(i.severity)}</span><button class="save-incident" data-id="${i.id}" title="Save incident"><i class="bi bi-bookmark"></i></button></div>`).join('')||'<div class="incident-empty"><i class="bi bi-search"></i><span>No incidents matched this trace.</span></div>';
   }catch(e){document.getElementById('incidentRows').innerHTML='<div class="incident-empty">The archive could not be reached.</div>'}
 }
-incidentSearch.addEventListener('input',loadIncidents);sectorFilter.addEventListener('change',loadIncidents);loadIncidents();
+const incidentSearch=document.getElementById('incidentSearch'),sectorFilter=document.getElementById('sectorFilter');incidentSearch.addEventListener('input',loadIncidents);sectorFilter.addEventListener('change',loadIncidents);loadIncidents();
 
 document.addEventListener('click',async e=>{const save=e.target.closest('.save-incident');if(save){const r=await fetch(`/api/incidents/${save.dataset.id}/save`,{method:'POST'});if(r.status===401)return openAuth('signup');save.classList.add('saved');save.innerHTML='<i class="bi bi-bookmark-fill"></i>'}});
 
@@ -186,5 +185,110 @@ const trainingCategories=[
  {id:'network',icon:'bi-diagram-3',title:'NETWORK RECONNAISSANCE',short:'IP addressing, TCP/UDP, ports and local simulated discovery.',difficulty:'Beginner → Advanced',missions:['Network Fundamentals','IP Addressing','TCP and UDP','Port Analysis','DNS Basics','Discovery','Nmap Simulation','Service Identification','Network Diagram']},
  {id:'linux',icon:'bi-terminal',title:'LINUX FUNDAMENTALS',short:'Files, users, permissions, processes and Bash fundamentals.',difficulty:'Beginner',missions:['Terminal Basics','File Management','Users and Groups','Permissions','Processes','System Administration','Bash Fundamentals']},
  {id:'password',icon:'bi-key',title:'PASSWORD SECURITY',short:'Hashing, strength, auditing and rate-limited local testing.',difficulty:'Beginner → Intermediate',missions:['Password Hashing','Hash Identification','Strength Analysis','Sample Hash Audit','Brute-force Concepts','Secure Authentication']},
- {id:'analysis',icon:'bi-radioactive',title:'NETWORK ANALYSIS',short:'Packet inspection, traffic patterns, protocols and anomaly detection.',difficulty:'Intermediate → Advanced',missions:['Packet Basics','Protocol Inspection','HTTP & DNS Traffic','Port & Scan Patterns','Anomaly Detection','Incident Timeline']}
+ {id:'analysis',icon:'bi-radioactive',title:'NETWORK ANALYSIS',short:'Packets, HTTP, DNS, TCP handshakes and suspicious traffic.',difficulty:'Intermediate',missions:['Packet Fundamentals','HTTP Analysis','DNS Traffic','TCP Handshakes','Suspicious Traffic','Log Analysis']},
+ {id:'webvuln',icon:'bi-bug',title:'WEB VULNERABILITY TESTING',short:'XSS, SQLi, CSRF, IDOR, SSRF and secure coding labs.',difficulty:'Intermediate → Advanced',missions:['XSS Lab','SQL Injection Lab','CSRF Lab','IDOR Lab','SSRF Concepts','Upload Security','Input Validation','Secure Coding']},
+ {id:'forensics',icon:'bi-search',title:'DIGITAL FORENSICS',short:'Log investigation, metadata, hashes and incident timelines.',difficulty:'Intermediate',missions:['Log Investigation','File Metadata','File Hashes','Incident Timeline','Suspicious Files','Evidence Handling']},
+ {id:'ctf',icon:'bi-trophy',title:'CTF CHALLENGES',short:'Capture-the-flag missions across three difficulty tiers.',difficulty:'Beginner → Advanced',missions:['Welcome CTF','Metadata Mystery','Hidden Web Route','Log Trail','Privilege Puzzle','Final Vault']}
 ];
+
+function renderLearningGrid(filter=''){
+ const grid=document.getElementById('learningGrid');if(!grid)return;
+ const needle=String(filter).trim().toLowerCase();
+ grid.innerHTML=trainingCategories.filter(c=>!needle||(`${c.title} ${c.short} ${c.missions.join(' ')}`.toLowerCase().includes(needle))).map(c=>`<article class="learning-card"><div class="learning-card-head"><i class="bi ${c.icon}"></i><span>${c.difficulty}</span></div><h3>${c.title}</h3><p>${c.short}</p><div class="learning-missions">${c.missions.slice(0,4).map((m,i)=>`<button data-launch-category="${c.id}" data-launch-mission="${m}"><b>${String(i+1).padStart(2,'0')}</b><span>${m}</span><i class="bi bi-arrow-right"></i></button>`).join('')}</div><button class="learning-enter" data-launch-category="${c.id}" data-launch-mission="${c.missions[0]}">ENTER LEARNING PATH <i class="bi bi-arrow-right"></i></button></article>`).join('')||'<div class="training-empty">No learning paths matched your search.</div>';
+}
+renderLearningGrid();
+document.getElementById('trainingSearch')?.addEventListener('input',e=>renderLearningGrid(e.target.value));
+
+const trainingTools=[
+ ['Nmap','bi-radar','nmap','Simulated local host and service discovery'],['Wireshark','bi-router','wireshark','Inspect provided packet captures'],['Burp Suite','bi-send','burp','HTTP request and response inspector'],['Gobuster','bi-folder2-open','gobuster','Authorized local directory discovery'],['Nikto','bi-shield-exclamation','nikto','Simulated web configuration audit'],['SQLmap','bi-database','sqlmap','Educational SQLi detection lab'],['John','bi-key-fill','john','Rate-limited sample hash auditing'],['Metasploit','bi-broadcast','metasploit','Isolated vulnerability education'],['Network','bi-hdd-network','ping','Local network diagnostics'],['Hash','bi-fingerprint','hash','Calculate sample text hashes'],['Logs','bi-list-columns-reverse','logscan','Investigate provided logs']
+];
+function renderToolLauncher(){const grid=document.getElementById('launcherGrid');if(!grid)return;grid.innerHTML=trainingTools.map(t=>`<button data-tool="${t[2]}"><i class="bi ${t[1]}"></i><b>${t[0]}</b><span>${t[3]}</span></button>`).join('')}
+renderToolLauncher();
+const toolLauncher=document.getElementById('toolLauncher');
+document.getElementById('openToolLauncher')?.addEventListener('click',()=>{toolLauncher.classList.add('open');toolLauncher.setAttribute('aria-hidden','false')});
+document.getElementById('closeToolLauncher')?.addEventListener('click',()=>{toolLauncher.classList.remove('open');toolLauncher.setAttribute('aria-hidden','true')});
+
+const fsState={cwd:'/home/analyst',files:{'/home/analyst/README.txt':'CYBERTRACE isolated training filesystem.\nUse ls, cat, grep, find and help.','/home/analyst/mission.txt':'Complete the objectives using only controlled lab commands.','/home/analyst/web/index.html':'<title>TraceShop Lab</title>','/home/analyst/web/comments.txt':'Unsafe example: <img src=x onerror=alert(1)>','/var/log/access.log':'10.10.10.5 - GET /login 200\n10.10.10.5 - POST /login 401\n10.10.10.8 - GET /admin 403','/var/log/auth.log':'Jan 21 10:14: sudo analyst : session opened','/home/analyst/secrets.env':'DATABASE_PASSWORD=lab-only-secret'}};
+const tabs=[{id:'main',title:'terminal 1',cwd:'/home/analyst',history:[],historyIndex:0,output:[]}];let activeTab='main';let workMission={category:'linux',title:'Terminal Fundamentals',difficulty:'BEGINNER',hint:'Start with ls and pwd.',objectives:['List files','Read mission.txt','Show working directory']};let workStep=0;
+const workstation=document.getElementById('ctWorkstation');
+function workPrint(text,type=''){const term=document.getElementById('workTerminal');const line=document.createElement('div');line.className='work-line '+type;if(type==='command')line.textContent=text;else line.textContent=text;term.appendChild(line);term.scrollTop=term.scrollHeight}
+function renderTabs(){document.getElementById('workstationTabs').innerHTML=tabs.map((t,i)=>`<button class="${t.id===activeTab?'active':''}" data-tab="${t.id}"><i></i><span>${t.title}</span>${i?'':'<b>01</b>'}</button>`).join('')+'<button class="add-tab" id="addWorkTab"><i class="bi bi-plus"></i></button>'}
+function resetWorkTerminal(){const tab=tabs.find(t=>t.id===activeTab);tab.output=[];document.getElementById('workTerminal').innerHTML='';workPrint('CYBERTRACE // ISOLATED TRAINING ENVIRONMENT','success');workPrint('No commands are sent to the host machine.');workPrint('Type help for commands or hint for mission guidance.')}
+function openWorkstation(category,title){const cat=trainingCategories.find(c=>c.id===category)||trainingCategories[2];workMission={category, title:title||cat.missions[0],difficulty:cat.difficulty,hint:'Use ls, cat, grep and the mission hint; all targets are local lab data.',objectives:cat.missions.slice(0,3).map(m=>`Explore: ${m}`)};workStep=0;workDone.clear();document.getElementById('workMissionTitle').textContent=workMission.title;document.getElementById('workMissionDifficulty').textContent=workMission.difficulty.toUpperCase();document.getElementById('workMissionHint').textContent=workMission.hint;document.getElementById('workMissionObjectives').innerHTML=workMission.objectives.map(o=>`<li>${o}</li>`).join('');document.getElementById('workMissionProgress').style.width='0%';document.getElementById('workMissionProgressLabel').textContent='0%';workstation.classList.add('open');workstation.setAttribute('aria-hidden','false');document.body.classList.add('workstation-open');renderTabs();resetWorkTerminal();setTimeout(()=>document.getElementById('workTerminalCommand')?.focus(),100)}
+document.addEventListener('click',e=>{const launch=e.target.closest('[data-launch-category]');if(launch){openWorkstation(launch.dataset.launchCategory,launch.dataset.launchMission)}const tab=e.target.closest('[data-tab]');if(tab){activeTab=tab.dataset.tab;renderTabs()}if(e.target.closest('#addWorkTab')){const id='tab-'+(tabs.length+1);tabs.push({id,title:'terminal '+(tabs.length+1),cwd:'/home/analyst',history:[],historyIndex:0,output:[]});activeTab=id;renderTabs();resetWorkTerminal()}});
+document.getElementById('exitWorkstation')?.addEventListener('click',()=>{workstation.classList.remove('open');workstation.setAttribute('aria-hidden','true');document.body.classList.remove('workstation-open')});
+document.getElementById('fullscreenTerminal')?.addEventListener('click',()=>{if(!document.fullscreenElement)workstation.requestFullscreen?.();else document.exitFullscreen?.()});
+document.getElementById('clearWorkTerminal')?.addEventListener('click',()=>{document.getElementById('workTerminal').innerHTML='' });
+document.getElementById('resetWorkTerminal')?.addEventListener('click',()=>{fsState.files=JSON.parse(fsInitialFiles);fsState.dirs=new Set(fsInitialDirs);fsState.cwd='/home/analyst';const label=document.getElementById('workPromptPath');if(label)label.textContent='analyst@cybertrace:~/linux';resetWorkTerminal()});
+
+const fsInitialFiles=JSON.stringify(fsState.files);const fsInitialDirs=['/home','/home/analyst','/home/analyst/web','/var','/var/log'];fsState.dirs=new Set(fsInitialDirs);const workDone=new Set();
+function resolvePath(path){const start=!path?fsState.cwd:path.startsWith('/')?path:fsState.cwd+'/'+path;const out=[];start.split('/').forEach(p=>{if(!p||p==='.')return;if(p==='..')out.pop();else out.push(p)});return '/'+out.join('/')}
+function fsDirExists(p){return p==='/'||fsState.dirs.has(p)||Object.keys(fsState.files).some(f=>f.startsWith(p+'/'))}
+function fsList(dir){const base=dir==='/'?'/':dir+'/';const out=new Map();Object.keys(fsState.files).forEach(p=>{if(p.startsWith(base)){const rest=p.slice(base.length);out.set(rest.split('/')[0],rest.includes('/'))}});fsState.dirs.forEach(d=>{if(d!==dir&&d.startsWith(base)){const name=d.slice(base.length).split('/')[0];if(name)out.set(name,true)}});return [...out.entries()].map(([name,isDir])=>({name,dir:isDir})).sort((a,b)=>a.name.localeCompare(b.name))}
+function normalDir(path){return path.replace(/\/$/,'')||'/'}
+const commandNames=['ls','cd','pwd','mkdir','touch','cat','echo','cp','mv','rm','grep','find','chmod','whoami','hostname','uname','date','history','ps','ip','help','clear','hint','nmap','wireshark','burp','gobuster','nikto','sqlmap','john','metasploit','ping','hash','logscan','neofetch','tar','curl','tutor'];
+function controlledCommand(raw){
+ const parts=raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g)||[];const cmd=(parts.shift()||'').toLowerCase();
+ const arg=parts.join(' ').replace(/^["']|["']$/g,'');const tab=tabs.find(t=>t.id===activeTab);const print=workPrint;
+ if(cmd==='clear'){document.getElementById('workTerminal').innerHTML='';return true}
+ if(cmd==='help'){print('ls cd pwd mkdir touch cat echo cp mv rm grep find chmod whoami hostname uname date history ps ip\nTools: nmap wireshark burp gobuster nikto sqlmap john metasploit ping hash logscan\nAI help: tutor <question>   (or use the AI KALI TUTOR panel)');print('Controlled commands may only inspect isolated lab data.');return true}
+ if(cmd==='tutor'){if(!arg){print('Usage: tutor <question>  e.g.  tutor what does nmap -sV do','success');return true}if(window.CTTutor){window.CTTutor.ask(arg);print('Tutor is answering in the AI KALI TUTOR panel.','success')}else print('Tutor panel is not available.','error');return true}
+ if(cmd==='hint'){print(workMission.hint,'success');return true}
+ if(cmd==='pwd'){print(fsState.cwd);return true}
+ if(cmd==='whoami'){print('analyst');return true}
+ if(cmd==='hostname'){print('cybertrace-lab');return true}
+ if(cmd==='uname'){print(arg.includes('-a')?'CYBERTRACE Training OS 1.0 browser-sandbox x86_64':'CYBERTRACE');return true}
+ if(cmd==='date'){print(new Date().toLocaleString());return true}
+ if(cmd==='history'){print(tab.history.map((h,i)=>`  ${i+1}  ${h}`).join('\n')||'No command history');return true}
+ if(cmd==='ps'){print('  PID  COMMAND\n    1  training-session\n   42  browser-terminal');return true}
+ if(cmd==='ip'){print(arg==='a'||arg.includes('addr')?'1: lo inet 127.0.0.1/8\n2: eth0 inet 10.10.10.20/24':'10.10.10.20  lab-network-only');return true}
+ if(cmd==='ls'){const flags=parts.filter(p=>p.startsWith('-')).join('');const rawTarget=parts.find(p=>!p.startsWith('-'));const target=resolvePath(rawTarget||'.');if(!fsDirExists(target)){if(fsState.files[target]!==undefined){print(target.split('/').pop());return true}print(`ls: cannot access '${rawTarget}': No such file or directory`,'error');return true}const names=fsList(target);print(flags.includes('l')?(names.map(n=>(n.dir?'drwxr-xr-x ':'-rw-r--r-- ')+'analyst  '+n.name+(n.dir?'/':'')).join('\n')||'total 0'):(names.map(n=>n.name+(n.dir?'/':'')).join('  ')||'(empty directory)'));return true}
+ if(cmd==='cd'){const target=!arg||arg==='~'?'/home/analyst':resolvePath(arg);if(!fsDirExists(target)){print(`cd: ${arg}: No such file or directory`,'error');return true}fsState.cwd=target;const label=document.getElementById('workPromptPath');if(label)label.textContent='analyst@cybertrace:'+(target==='/home/analyst'?'~':target);return true}
+ if(cmd==='mkdir'){const name=parts.find(p=>!p.startsWith('-'));if(!name){print('mkdir: missing operand','error');return true}fsState.dirs.add(resolvePath(name));print(`created directory ${name}`,'success');return true}
+ if(cmd==='touch'){if(!arg){print('touch: missing operand','error');return true}fsState.files[resolvePath(arg)]='';print(`created ${arg}`,'success');return true}
+ if(cmd==='echo'){print(arg);return true}
+ if(cmd==='cat'){if(!arg){print('cat: missing file operand','error');return true}const path=resolvePath(arg);if(fsState.files[path])print(fsState.files[path]);else print(`cat: ${arg}: file not found`,'error');return true}
+ if(cmd==='grep'){const [q,file]=arg.split(/\s+/);if(!q){print('grep: missing pattern','error');return true}const entries=file&&fsState.files[resolvePath(file)]?[ [resolvePath(file),fsState.files[resolvePath(file)]]]:Object.entries(fsState.files);let found=false;entries.forEach(([p,c])=>c.split('\n').forEach(line=>{if(line.toLowerCase().includes(q.toLowerCase())){print(`${p}:${line}`);found=true}}));if(!found)print(`No match for ${q}`);return true}
+ if(cmd==='find'){const rawRoot=parts.find(p=>!p.startsWith('-'));const root=resolvePath(rawRoot||'.');const hits=[...fsState.dirs,...Object.keys(fsState.files)].filter(p=>p===root||p.startsWith(root==='/'?'/':root+'/')).sort();print(hits.join('\n')||`find: '${rawRoot||'.'}': No such file or directory`);return true}
+ if(cmd==='cp'||cmd==='mv'){const [src,dst]=parts;if(!src||!dst){print(`${cmd}: missing file operand`,'error');return true}const s=resolvePath(src);let d=resolvePath(dst);if(fsState.files[s]===undefined){print(`${cmd}: cannot stat '${src}': No such file or directory`,'error');return true}if(fsDirExists(d))d=d+'/'+s.split('/').pop();fsState.files[d]=fsState.files[s];if(cmd==='mv')delete fsState.files[s];return true}
+ if(cmd==='rm'){const targets=parts.filter(p=>!p.startsWith('-'));if(!targets.length){print('rm: missing operand','error');return true}if(targets.some(t=>t==='/'||t==='/*')){print('rm: blocked — host and root files are unavailable','error');return true}targets.forEach(t=>{const p=resolvePath(t);if(fsState.files[p]!==undefined){delete fsState.files[p]}else print(`rm: cannot remove '${t}': No such file or directory`,'error')});return true}
+ if(cmd==='chmod'){print(arg.includes('600')?'mode of secrets.env changed to owner read/write':'permission mode updated in isolated filesystem','success');return true}
+ if(cmd==='nmap'){print('Starting CYBERTRACE Nmap simulation\n10.10.10.5  open 80/tcp  http  (lab-web)\n10.10.10.5  open 443/tcp https  (lab-web)\n10.10.10.20 open 22/tcp  ssh   (lab-session)\nScan confined to 10.10.10.0/24');return true}
+ if(cmd==='ping'){if(arg&&arg!=='10.10.10.5'&&arg!=='lab-web.local'){print('ping: blocked — only authorized lab hosts are accepted','error');return true}print('PING 10.10.10.5 (lab-web): 3 packets transmitted, 3 received');return true}
+ if(cmd==='gobuster'){print('Gobuster-style local directory discovery\n/ (200)  /login (200)  /admin (403)  /backup (301)\nAuthorized lab target only.');return true}
+ if(cmd==='nikto'){print('Nikto-style lab audit\n[+] Server banner: TraceShop/1.0\n[+] Missing security headers detected\n[+] Directory /backup is exposed\n[+] Remediation: headers, access controls, remove backup files');return true}
+ if(cmd==='burp'){print('BURP-style HTTP inspector ready\nGET /login HTTP/1.1\nHost: lab-web.local\nCookie: session=LAB-DEMO-SESSION\nResponse: 200 OK | Set-Cookie: Secure; HttpOnly');return true}
+ if(cmd==='wireshark'||cmd==='logscan'){print('PCAP/log source: isolated-samples\n10.10.10.5 -> 10.10.10.20 DNS A lab-web.local\n10.10.10.20 -> 10.10.10.5 SYN\n10.10.10.5 -> 10.10.10.20 SYN/ACK\nSuspicious sample: repeated POST /login, 401 responses');return true}
+ if(cmd==='sqlmap'){print('SQLmap-style education: testing lab-web.local/login only\n[SAFE] Parameter id: possible SQL injection class\n[INFO] No real database or public target queried\nRemediation: parameterized query');return true}
+ if(cmd==='john'){print('John-style sample hash audit\nRate limit: 2 attempts per second\nFound sample hash format: bcrypt\n[LAB] Weak sample password rejected\nUse strong, unique passwords and Argon2/bcrypt.');return true}
+ if(cmd==='metasploit'){print('Metasploit-style vulnerability education\nModule: auxiliary/trace/check-http-misconfig\nTarget: lab-web.local (authorized)\nStatus: header misconfiguration identified\nRemediation: enable HSTS and remove debug routes');return true}
+ if(cmd==='hash'){print(arg?'SHA-256(sample): 5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8':'Usage: hash <sample-text>');return true}
+ if(cmd==='curl'){if(arg&&/https?:\/\/[^/]*10\.10|lab-web\.local/.test(arg))print('HTTP/1.1 200 OK\nX-Lab-Target: authorized-simulator\nContent-Type: text/html');else print('curl: blocked — supply only lab-web.local or the 10.10.10.0/24 lab network','error');return true}
+ if(cmd==='neofetch'){print('CYBERTRACE TRAINING OS\nKernel: Browser Terminal 1.0\nShell: ct-sh\nEnvironment: Isolated Sandbox');return true}
+ print(`command not found: ${cmd}. Type help for controlled commands.`,'error');return true;
+}
+
+function completeWorkMission(){if(workStep>=workMission.objectives.length)return;workStep=Math.min(workMission.objectives.length,workStep+1);const percent=Math.round(workStep/workMission.objectives.length*100);document.getElementById('workMissionProgress').style.width=percent+'%';document.getElementById('workMissionProgressLabel').textContent=percent+'%';if(percent===100){workPrint('MISSION COMPLETE — 100 XP and achievement earned','complete');fetch('/api/training/missions/'+encodeURIComponent(workMission.title)+'/complete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({course:workMission.category,score:100,seconds:120,description:workMission.title})}).then(r=>r.ok?r.json():null).then(d=>{if(d?.user&&typeof applyUser==='function')applyUser(d.user)}).catch(()=>{})}}
+
+const workTerminalForm=document.getElementById('workTerminalForm');const workTerminalCommand=document.getElementById('workTerminalCommand');
+workTerminalForm?.addEventListener('submit',e=>{e.preventDefault();const raw=workTerminalCommand.value.trim();if(!raw)return;const tab=tabs.find(t=>t.id===activeTab);tab.history.push(raw);tab.historyIndex=tab.history.length;workPrint('analyst@cybertrace:~$ '+raw,'command');workTerminalCommand.value='';controlledCommand(raw);const firstWord=raw.split(/\s+/)[0].toLowerCase();if(['ls','pwd','cat','nmap','gobuster','grep','whoami','ping'].includes(firstWord)&&!workDone.has(firstWord)){workDone.add(firstWord);completeWorkMission()}});
+docume
+
+document.getElementById('launcherGrid')?.addEventListener('click', e => {
+    const tool = e.target.closest('[data-tool]');
+    if (!tool) return;
+
+    toolLauncher.classList.remove('open');
+
+    openWorkstation(
+        tool.dataset.tool === 'nmap' || tool.dataset.tool === 'ping'
+            ? 'network'
+            : 'linux',
+        'Educational ' + tool.dataset.tool + ' Lab'
+    );
+
+    setTimeout(() => {
+        workTerminalCommand.value = tool.dataset.tool + ' ';
+        workTerminalCommand.focus();
+    }, 120);
+});

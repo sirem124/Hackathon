@@ -4,6 +4,12 @@
   const grid = document.getElementById('newsGrid');
   if (!grid) return;
 
+  document.querySelectorAll('.news-tabs [data-pane]').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.news-tabs button').forEach(b => b.classList.toggle('active', b === btn));
+    document.getElementById('paneEmbed').hidden = btn.dataset.pane !== 'embed';
+    document.getElementById('paneFeed').hidden = btn.dataset.pane !== 'feed';
+  }));
+
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const filtersEl = document.getElementById('newsFilters');
   const searchEl = document.getElementById('newsSearch');

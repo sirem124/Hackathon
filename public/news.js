@@ -1,187 +1,146 @@
-const cardsEl=document.getElementById('newsCards');
-const listingEl=document.getElementById('newsListing');
-const articleEl=document.getElementById('newsArticle');
-const searchEl=document.getElementById('newsSearch');
-const categoryEl=document.getElementById('newsCategory');
-const countEl=document.getElementById('newsCount');
-let debounce;
-const escapeHtml=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const prettyDate=value=>{const date=new Date(value+'T12:00:00');return Number.isNaN(date.getTime())?value:date.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'})};
-async function loadNews(){
-  const params=new URLSearchParams();if(searchEl.value.trim())params.set('search',searchEl.value.trim());if(categoryEl.value)params.set('category',categoryEl.value);
-  cardsEl.innerHTML='<div class="news-loading">Synchronizing intelligence feed…</div>';
-  try{const response=await fetch('/api/news?'+params.toString());if(!response.ok)throw new Error('News service unavailable');const articles=await response.json();countEl.textContent=String(articles.length).padStart(2,'0')+' REPORTS';
-    cardsEl.innerHTML=articles.length?articles.map(article=>`<article class="news-card"><div class="news-card-top"><span class="news-tag">${escapeHtml(article.category)}</span><time class="news-date">${escapeHtml(prettyDate(article.published_at))}</time></div><h2>${escapeHtml(article.title)}</h2><p>${escapeHtml(article.description)}</p><div class="news-card-bottom"><span class="news-source">SOURCE / ${escapeHtml(article.source_name)}</span><a class="news-read" href="/news/article/${encodeURIComponent(article.slug)}">READ REPORT <i class="bi bi-arrow-right"></i></a></div></article>`).join(''):'<div class="news-empty">NO REPORTS MATCH YOUR SEARCH.</div>';
-  }catch(error){cardsEl.innerHTML='<div class="news-empty">Could not load the news feed. Check that the CYBERTRACE server is running.</div>';countEl.textContent='FEED OFFLINE';}
+// CYBERTRACE cybersecurity news aggregator (server side).
+// Fetches public RSS/Atom feeds, keeps only headline + short excerpt + link back to the original
+// article, and caches the result so we never hammer the sources.
+
+const FEEDS = [
+  { id: 'bleeping', name: 'BleepingComputer', url: 'https://www.bleepingcomputer.com/feed/' },
+  { id: 'thehackernews', name: 'The Hacker News', url: 'https://feeds.feedburner.com/TheHackersNews' },
+  { id: 'krebs', name: 'Krebs on Security', url: 'https://krebsonsecurity.com/feed/' },
+  { id: 'record', name: 'The Record', url: 'https://therecord.media/feed' },
+  { id: 'cisa', name: 'CISA Advisories', url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml', advisory: true }
+];
+const KEV_URL = 'https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json';
+const CACHE_MS = 15 * 60 * 1000;
+const MAX_ITEMS = 60;
+
+function decode(text) {
+  return String(text || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&#x([0-9a-f]+);/gi, (m, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (m, d) => String.fromCodePoint(Number(d)))
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'").replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&');
 }
-async function loadArticle(slug){
-  listingEl.hidden=true;articleEl.hidden=false;articleEl.innerHTML='<div class="news-loading">Opening report…</div>';
-  try{const response=await fetch('/api/news/'+encodeURIComponent(slug));if(!response.ok)throw new Error('Article not found');const article=await response.json();
-    articleEl.innerHTML=`<a class="news-back" href="/news"><i class="bi bi-arrow-left"></i> BACK TO NEWS</a><div class="article-meta"><span>${escapeHtml(article.category.toUpperCase())}</span><span>•</span><time>${escapeHtml(prettyDate(article.published_at))}</time><span>•</span><span>${escapeHtml(article.source_name)}</span></div><h1>${escapeHtml(article.title)}</h1><p class="article-deck">${escapeHtml(article.description)}</p><div class="article-body">${(article.content||[]).map(section=>`<section><h2>${escapeHtml(section.heading)}</h2><p>${escapeHtml(section.paragraph)}</p></section>`).join('')}</div><div class="article-source"><p>Original reporting and additional details are available from ${escapeHtml(article.source_name)}.</p><a href="${escapeHtml(article.source_url)}" target="_blank" rel="noopener noreferrer">READ ORIGINAL SOURCE <i class="bi bi-box-arrow-up-right"></i></a></div>`;
-  }catch(error){articleEl.innerHTML='<a class="news-back" href="/news"><i class="bi bi-arrow-left"></i> BACK TO NEWS</a><div class="news-empty">This report could not be found.</div>';}
+function stripHtml(text) {
+  return decode(text).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
-searchEl.addEventListener('input',()=>{clearTimeout(debounce);debounce=setTimeout(loadNews,220)});categoryEl.addEventListener('change',loadNews);
-const match=location.pathname.match(/^\/news\/article\/([^/]+)\/?$/);if(match)loadArticle(decodeURIComponent(match[1]));else loadNews();
-let articles = [];
-let activeCategory = 'All';
-
-const $ = id => document.getElementById(id);
-
-// Load news from backend
-async function loadNews() {
-  try {
-    const response = await fetch('/api/news');
-    if (!response.ok) {
-      throw new Error('News API error: ' + response.status);
-    }
-
-    articles = await response.json();
-    renderNews();
-  } catch (error) {
-    $('newsGrid').textContent = 'Unable to connect to CYBERTRACE. Check that the backend is running.';
-    console.error(error);
-  }
+function getTag(block, name) {
+  const m = block.match(new RegExp('<' + name + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + name + '>', 'i'));
+  return m ? m[1] : '';
 }
+function getLink(block) {
+  const text = decode(getTag(block, 'link')).trim();
+  if (text) return text;
+  const m = block.match(/<link[^>]*href=["']([^"']+)["']/i);
+  return m ? decode(m[1]).trim() : '';
+}
+function getImage(block) {
+  const m =
+    block.match(/<media:(?:content|thumbnail)[^>]*url=["']([^"']+)["']/i) ||
+    block.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*type=["']image/i) ||
+    decode(getTag(block, 'content:encoded') || getTag(block, 'description')).match(/<img[^>]*src=["']([^"']+)["']/i);
+  return m ? decode(m[1]).trim() : '';
+}
+const isHttp = u => /^https?:\/\//i.test(u);
 
-// Safely create article cards
-function renderNews() {
-  const search = $('searchInput').value.toLowerCase();
-
-  const filtered = articles.filter(article => {
-    const matchesSearch =
-      (article.title || '').toLowerCase().includes(search) ||
-      (article.description || '').toLowerCase().includes(search);
-    const matchesCategory = activeCategory === 'All' || article.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  $('newsGrid').replaceChildren();
-  $('articleCount').textContent = filtered.length + ' REPORTS';
-  $('emptyMessage').hidden = filtered.length !== 0;
-
-  // Featured article only when viewing all reports
-  const featured = articles[0];
-  if (activeCategory === 'All' && !search && featured) {
-    $('featured').hidden = false;
-    $('featuredTitle').textContent = featured.title;
-    $('featuredDescription').textContent = featured.description;
-    $('featuredLink').href = '/news/article/' + encodeURIComponent(featured.slug);
-  } else {
-    $('featured').hidden = true;
-  }
-
-  filtered.forEach(article => {
-    const card = document.createElement('article');
-    card.className = 'news-card';
-
-    const category = document.createElement('span');
-    category.className = 'category-label';
-    category.textContent = article.category || 'Cybersecurity';
-
-    const title = document.createElement('h3');
-    title.textContent = article.title;
-
-    const description = document.createElement('p');
-    description.textContent = article.description;
-
-    const meta = document.createElement('div');
-    meta.className = 'meta';
-    const date = article.published_at
-      ? new Date(article.published_at).toLocaleDateString()
-      : 'Recently published';
-    meta.textContent = (article.source_name || 'CYBERTRACE') + ' · ' + date;
-
-    const link = document.createElement('a');
-    link.className = 'read';
-    link.href = '/news/article/' + encodeURIComponent(article.slug);
-    link.textContent = 'READ FULL REPORT →';
-
-    card.append(category, title, description, meta, link);
-    $('newsGrid').appendChild(card);
-  });
+function classify(text, feed) {
+  const t = text.toLowerCase();
+  if (feed.advisory) return 'advisory';
+  if (/cve-\d{4}|vulnerab|zero-day|0-day|\bpatch|\brce\b|exploit/.test(t)) return 'vulnerability';
+  if (/ransomware|malware|trojan|botnet|backdoor|stealer|worm\b|phishing/.test(t)) return 'malware';
+  if (/breach|leak|data theft|stolen|hacked|exposed|compromis/.test(t)) return 'breach';
+  if (/\bai\b|artificial intelligence|llm|chatgpt|openai|anthropic|grok|gemini/.test(t)) return 'ai';
+  return 'security';
 }
 
-// Search
-$('searchInput').addEventListener('input', renderNews);
-
-// Category filters
-document.querySelectorAll('.category').forEach(button => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.category').forEach(item => {
-      item.classList.remove('active');
+function parseFeed(xml, feed) {
+  const blocks = xml.match(/<item[\s>][\s\S]*?<\/item>|<entry[\s>][\s\S]*?<\/entry>/gi) || [];
+  const items = [];
+  for (const block of blocks.slice(0, 25)) {
+    const title = decode(getTag(block, 'title')).replace(/\s+/g, ' ').trim(); // escaped by the browser when rendered
+    const link = getLink(block);
+    if (!title || !isHttp(link)) continue;
+    const rawDate = decode(getTag(block, 'pubDate') || getTag(block, 'published') || getTag(block, 'updated') || getTag(block, 'dc:date')).trim();
+    const date = new Date(rawDate);
+    let summary = stripHtml(getTag(block, 'description') || getTag(block, 'summary') || getTag(block, 'content:encoded'));
+    if (summary.length > 220) summary = summary.slice(0, 217).replace(/\s+\S*$/, '') + '...';
+    const image = getImage(block);
+    items.push({
+      title: title.slice(0, 220),
+      link,
+      source: feed.name,
+      sourceId: feed.id,
+      category: classify(title + ' ' + summary, feed),
+      summary,
+      image: isHttp(image) && image.startsWith('https://') ? image : '',
+      published: Number.isNaN(date.getTime()) ? null : date.toISOString()
     });
-    button.classList.add('active');
-    activeCategory = button.dataset.filter;
-    renderNews();
-  });
-});
-
-// Render article content safely
-function renderContent(content) {
-  const body = $('articleBody');
-  body.replaceChildren();
-
-  String(content || '').split('\n\n').forEach(section => {
-    const lines = section.split('\n');
-    const first = lines[0].trim();
-
-    if (/^(WHAT HAPPENED|WHY DOES IT MATTER|SECURITY LESSONS)$/i.test(first)) {
-      const heading = document.createElement('h3');
-      heading.textContent = first;
-      body.appendChild(heading);
-
-      if (lines.length > 1) {
-        const paragraph = document.createElement('p');
-        paragraph.textContent = lines.slice(1).join('\n');
-        body.appendChild(paragraph);
-      }
-    } else {
-      const paragraph = document.createElement('p');
-      paragraph.textContent = section;
-      body.appendChild(paragraph);
-    }
-  });
+  }
+  return items;
 }
 
-// Load individual article
-async function loadArticle(slug) {
-  $('newsHome').hidden = true;
-  $('articleView').hidden = false;
+async function fetchText(url, ms = 8000) {
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(ms),
+    headers: { 'user-agent': 'CYBERTRACE-News/1.0 (education project)', accept: 'application/rss+xml, application/atom+xml, application/xml, text/xml, application/json, */*' }
+  });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+  return (await response.text()).slice(0, 3_000_000);
+}
 
+async function loadKev() {
   try {
-    const response = await fetch('/api/news/' + encodeURIComponent(slug));
-    if (!response.ok) {
-      throw new Error('Article not found');
-    }
-
-    const article = await response.json();
-    $('articleCategory').textContent = article.category;
-    $('articleTitle').textContent = article.title;
-    $('articleDescription').textContent = article.description;
-    $('articleDate').textContent = new Date(article.published_at).toLocaleDateString();
-    $('articleSource').textContent = 'Source: ' + article.source_name;
-    renderContent(article.content);
-
-    const source = $('sourceLink');
-    source.href = article.source_url || '#';
-    source.hidden = !article.source_url;
-    document.title = article.title + ' | CYBERTRACE';
-  } catch (error) {
-    $('articleTitle').textContent = 'Article unavailable';
-    $('articleDescription').textContent = 'The requested report could not be found.';
-    $('articleBody').replaceChildren();
+    const data = JSON.parse(await fetchText(KEV_URL, 10000));
+    const list = Array.isArray(data.vulnerabilities) ? data.vulnerabilities : [];
+    const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+    const last7 = list.filter(v => new Date(v.dateAdded).getTime() >= weekAgo).length;
+    const latest = list.slice().sort((a, b) => String(b.dateAdded).localeCompare(String(a.dateAdded)))[0] || null;
+    return {
+      total: list.length,
+      last7,
+      latest: latest && /^CVE-\d{4}-\d{4,}$/.test(latest.cveID) ? {
+        cve: latest.cveID, vendor: String(latest.vendorProject || '').slice(0, 60),
+        product: String(latest.product || '').slice(0, 60), name: String(latest.vulnerabilityName || '').slice(0, 140),
+        dateAdded: latest.dateAdded
+      } : null
+    };
+  } catch (e) {
+    return null;
   }
 }
 
-// Back to News
-$('backButton').addEventListener('click', () => {
-  window.location.href = '/news';
-});
+let cache = null;
+let inflight = null;
 
-// Detect article URL
-const parts = window.location.pathname.split('/').filter(Boolean);
-if (parts.length === 3 && parts[0] === 'news' && parts[1] === 'article') {
-  loadArticle(decodeURIComponent(parts[2]));
-} else {
-  loadNews();
+async function refresh() {
+  const [results, kev] = await Promise.all([
+    Promise.allSettled(FEEDS.map(async feed => parseFeed(await fetchText(feed.url), feed))),
+    loadKev()
+  ]);
+  const sources = FEEDS.map((feed, i) => ({ name: feed.name, ok: results[i].status === 'fulfilled' && results[i].value.length > 0 }));
+  const seen = new Set();
+  const items = results
+    .flatMap(r => (r.status === 'fulfilled' ? r.value : []))
+    .filter(item => (seen.has(item.link) ? false : seen.add(item.link)))
+    .sort((a, b) => String(b.published || '').localeCompare(String(a.published || '')))
+    .slice(0, MAX_ITEMS);
+  if (!items.length) throw new Error('No feed returned articles');
+  return { items, kev, sources, updatedAt: new Date().toISOString() };
 }
+
+async function getNews() {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.data;
+  if (!inflight) {
+    inflight = refresh()
+      .then(data => { cache = { at: Date.now(), data }; return data; })
+      .finally(() => { inflight = null; });
+  }
+  try {
+    return await inflight;
+  } catch (error) {
+    if (cache) return { ...cache.data, stale: true }; // serve old news rather than nothing
+    throw error;
+  }
+}
+
+module.exports = { getNews, parseFeed, FEEDS };
